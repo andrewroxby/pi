@@ -1370,8 +1370,8 @@ Subscribe to events. Returns an unsubscribe function that removes only that regi
 
 ```typescript
 const unsubscribe = pi.on("agent_end", async (event) => {
-  await updateIntegration(event.messages);
   unsubscribe();
+  await updateIntegration(event.messages);
 });
 ```
 
