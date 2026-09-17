@@ -76,6 +76,7 @@ import type {
 	ExtensionWidgetOptions,
 	MarkdownTransformer,
 	ProjectTrustContext,
+	UserBashEventResult,
 	WorkingIndicatorOptions,
 } from "../../core/extensions/index.ts";
 import { FooterDataProvider, type ReadonlyFooterDataProvider } from "../../core/footer-data-provider.ts";
@@ -182,7 +183,7 @@ interface Expandable {
 
 interface WorkingStatusEditor extends EditorComponent {
 	readonly embedWorkingStatus: boolean;
-	setWorkingStatusIndicator(indicator: WorkingStatusIndicator | undefined): void;
+	setWorkingStatusIndicator(indicator: StatusIndicator | undefined): void;
 }
 
 function isWorkingStatusEditor(editor: EditorComponent): editor is WorkingStatusEditor {
@@ -2092,7 +2093,7 @@ export class InteractiveMode {
 		this.ui.requestRender();
 	}
 
-	private setEditorWorkingStatusIndicator(indicator: WorkingStatusIndicator | undefined): boolean {
+	private setEditorWorkingStatusIndicator(indicator: StatusIndicator | undefined): boolean {
 		this.defaultEditor.setWorkingStatusIndicator(undefined);
 		if (!isWorkingStatusEditor(this.editor)) return false;
 		this.editor.setWorkingStatusIndicator(indicator);
@@ -2105,7 +2106,7 @@ export class InteractiveMode {
 		this.activeWorkingIndicatorEmbedded = false;
 		this.statusContainer.clear();
 		this.setEditorWorkingStatusIndicator(undefined);
-		if (indicator instanceof WorkingStatusIndicator && this.setEditorWorkingStatusIndicator(indicator)) {
+		if (this.setEditorWorkingStatusIndicator(indicator)) {
 			this.activeWorkingIndicatorEmbedded = true;
 			return;
 		}
@@ -2117,7 +2118,7 @@ export class InteractiveMode {
 			return;
 		}
 		const clearedIndicator = this.activeStatusIndicator;
-		const clearedIndicatorWasEmbedded = clearedIndicator?.kind === "working" && this.activeWorkingIndicatorEmbedded;
+		const clearedIndicatorWasEmbedded = this.activeWorkingIndicatorEmbedded;
 		clearedIndicator?.dispose();
 		this.activeStatusIndicator = undefined;
 		this.activeWorkingIndicatorEmbedded = false;
@@ -2717,7 +2718,7 @@ export class InteractiveMode {
 		}
 
 		this.editorContainer.addChild(this.editor as Component);
-		if (this.activeStatusIndicator instanceof WorkingStatusIndicator) {
+		if (this.activeStatusIndicator) {
 			this.statusContainer.clear();
 			this.activeWorkingIndicatorEmbedded = this.setEditorWorkingStatusIndicator(this.activeStatusIndicator);
 			if (!this.activeWorkingIndicatorEmbedded) {
@@ -3620,6 +3621,8 @@ export class InteractiveMode {
 				this.chatContainer.addChild(component);
 				break;
 			}
+			case "system":
+				break;
 			case "user": {
 				const textContent = this.getUserMessageText(message);
 				if (textContent) {
@@ -4170,9 +4173,7 @@ export class InteractiveMode {
 			const level = this.session.thinkingLevel || "off";
 			this.editor.borderColor = theme.getThinkingBorderColor(level);
 		}
-		if (this.activeStatusIndicator?.kind === "working") {
-			this.activeStatusIndicator.invalidate();
-		}
+		this.activeStatusIndicator?.invalidate();
 		this.ui.requestRender();
 	}
 
@@ -6507,12 +6508,18 @@ export class InteractiveMode {
 		const extensionRunner = this.session.extensionRunner;
 
 		// Emit user_bash event to let extensions intercept
-		const eventResult = await extensionRunner.emitUserBash({
-			type: "user_bash",
-			command,
-			excludeFromContext,
-			cwd: this.sessionManager.getCwd(),
-		});
+		let eventResult: UserBashEventResult | undefined;
+		try {
+			eventResult = await extensionRunner.emitUserBash({
+				type: "user_bash",
+				command,
+				excludeFromContext,
+				cwd: this.sessionManager.getCwd(),
+			});
+		} catch {
+			// The extension runner already reported the error. Do not fall back to local execution.
+			return;
+		}
 
 		// If extension returned a full result, use it directly
 		if (eventResult?.result) {
