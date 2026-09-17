@@ -41,6 +41,7 @@ type RenderSessionContextThis = {
 	settingsManager: {
 		getShowImages(): boolean;
 		getImageWidthCells(): number;
+		getToolShellPaddingY(): 0 | 1;
 		getShowCacheMissNotices(): boolean;
 	};
 	sessionManager: { getCwd(): string; getEntries(): SessionEntry[] };
@@ -72,6 +73,7 @@ function createFakeInteractiveModeThis(): RenderSessionContextThis {
 		settingsManager: {
 			getShowImages: () => false,
 			getImageWidthCells: () => 60,
+			getToolShellPaddingY: () => 1,
 			getShowCacheMissNotices: () => false,
 		},
 		sessionManager: { getCwd: () => process.cwd(), getEntries: () => [] },

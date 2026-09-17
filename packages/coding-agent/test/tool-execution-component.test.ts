@@ -68,6 +68,63 @@ describe("ToolExecutionComponent parity", () => {
 		expect(rendered).toContain("custom result");
 	});
 
+	test("configures vertical padding for default tool shells", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderCall: () => new Text("custom call", 0, 0),
+			renderResult: () => new Text("custom result", 0, 0),
+		};
+		const render = (toolShellPaddingY?: 0 | 1) => {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`tool-padding-${toolShellPaddingY ?? "default"}`,
+				{},
+				{ toolShellPaddingY },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+			return component.render(120).map((line) => stripAnsi(line));
+		};
+
+		const defaultLines = render();
+		expect(defaultLines).toHaveLength(5);
+		expect(defaultLines.at(-1)?.trim()).toBe("");
+
+		const compactLines = render(0);
+		expect(compactLines).toHaveLength(3);
+		expect(compactLines[0]).toBe("");
+		expect(compactLines[1]).toContain("custom call");
+		expect(compactLines[2]).toContain("custom result");
+		expect(compactLines.at(-1)?.trim()).not.toBe("");
+	});
+
+	test("does not apply default-shell padding settings to self-rendered tools", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderShell: "self",
+			renderCall: () => new Text("self call", 0, 0),
+			renderResult: () => new Text("self result", 0, 0),
+		};
+		const render = (toolShellPaddingY: 0 | 1) => {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`self-padding-${toolShellPaddingY}`,
+				{},
+				{ toolShellPaddingY },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+			return component.render(120).map((line) => stripAnsi(line));
+		};
+
+		expect(render(0)).toEqual(render(1));
+		expect(render(0).map((line) => line.trim())).toEqual(["", "self call", "self result"]);
+	});
+
 	test("self-rendered empty tool rows take no layout space", () => {
 		const toolDefinition: ToolDefinition = {
 			...createBaseToolDefinition(),

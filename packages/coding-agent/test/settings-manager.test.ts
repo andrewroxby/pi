@@ -499,6 +499,25 @@ describe("SettingsManager", () => {
 		});
 	});
 
+	describe("toolShellPaddingY", () => {
+		it("defaults to 1 and accepts compact default tool shells", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+
+			expect(manager.getToolShellPaddingY()).toBe(1);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellPaddingY: 0 }));
+			const compactManager = SettingsManager.create(projectDir, agentDir);
+			expect(compactManager.getToolShellPaddingY()).toBe(0);
+		});
+
+		it("treats unsupported values as default padding", () => {
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellPaddingY: 2 }));
+
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getToolShellPaddingY()).toBe(1);
+		});
+	});
+
 	describe("markdown.mermaid", () => {
 		it("defaults to streaming and persists rendering modes", async () => {
 			const manager = SettingsManager.create(projectDir, agentDir);
