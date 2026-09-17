@@ -3261,6 +3261,7 @@ export class InteractiveMode {
 									{
 										showImages: this.settingsManager.getShowImages(),
 										imageWidthCells: this.settingsManager.getImageWidthCells(),
+										toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
 									},
 									this.getRegisteredToolDefinition(content.name),
 									this.ui,
@@ -3336,6 +3337,7 @@ export class InteractiveMode {
 						{
 							showImages: this.settingsManager.getShowImages(),
 							imageWidthCells: this.settingsManager.getImageWidthCells(),
+							toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
 						},
 						this.getRegisteredToolDefinition(event.toolName),
 						this.ui,
@@ -3731,6 +3733,7 @@ export class InteractiveMode {
 							{
 								showImages: this.settingsManager.getShowImages(),
 								imageWidthCells: this.settingsManager.getImageWidthCells(),
+								toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
 							},
 							this.getRegisteredToolDefinition(content.name),
 							this.ui,

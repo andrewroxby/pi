@@ -42,6 +42,7 @@ const FALLBACK_PREVIEW_LINES = 10;
 export interface ToolExecutionOptions {
 	showImages?: boolean;
 	imageWidthCells?: number;
+	toolShellPaddingY?: 0 | 1;
 }
 
 export class ToolExecutionComponent extends Container {
@@ -61,6 +62,7 @@ export class ToolExecutionComponent extends Container {
 	private expanded = false;
 	private showImages: boolean;
 	private imageWidthCells: number;
+	private toolShellPaddingY: 0 | 1;
 	private isPartial = true;
 	private toolDefinition?: ToolRenderers;
 	private ui: TUI;
@@ -91,6 +93,7 @@ export class ToolExecutionComponent extends Container {
 		this.toolDefinition = toolDefinition;
 		this.showImages = options.showImages ?? true;
 		this.imageWidthCells = options.imageWidthCells ?? 60;
+		this.toolShellPaddingY = options.toolShellPaddingY === 0 ? 0 : 1;
 		this.ui = ui;
 		this.cwd = cwd;
 
@@ -99,8 +102,8 @@ export class ToolExecutionComponent extends Container {
 		// Always create all shell variants. contentBox is used for default renderer-based composition.
 		// selfRenderContainer is used when the tool renders its own framing.
 		// contentText is reserved for generic fallback rendering when no tool definition exists.
-		this.contentBox = new Box(1, 1, (text: string) => theme.bg("toolPendingBg", text));
-		this.contentText = new Text("", 1, 1, (text: string) => theme.bg("toolPendingBg", text));
+		this.contentBox = new Box(1, this.toolShellPaddingY, (text: string) => theme.bg("toolPendingBg", text));
+		this.contentText = new Text("", 1, this.toolShellPaddingY, (text: string) => theme.bg("toolPendingBg", text));
 		this.contentTextRegion = this.createResultRegion(this.contentText);
 		this.selfRenderContainer = new Container();
 
