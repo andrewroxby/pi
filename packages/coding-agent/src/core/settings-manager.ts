@@ -132,6 +132,7 @@ export interface Settings {
 	editorPaddingX?: number; // Horizontal padding for input editor (default: 0)
 	outputPad?: 0 | 1; // Horizontal padding for chat message output (default: 1)
 	toolShellPaddingY?: 0 | 1; // Vertical padding for default tool shells (default: 1)
+	toolShellSpacingY?: 0 | 1; // Blank rows before tool shells (default: 1)
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
@@ -1336,6 +1337,10 @@ export class SettingsManager {
 
 	getToolShellPaddingY(): 0 | 1 {
 		return this.settings.toolShellPaddingY === 0 ? 0 : 1;
+	}
+
+	getToolShellSpacingY(): 0 | 1 {
+		return this.settings.toolShellSpacingY === 0 ? 0 : 1;
 	}
 
 	getAutocompleteMaxVisible(): number {

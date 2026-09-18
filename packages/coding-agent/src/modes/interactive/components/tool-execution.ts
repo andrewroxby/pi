@@ -43,6 +43,7 @@ export interface ToolExecutionOptions {
 	showImages?: boolean;
 	imageWidthCells?: number;
 	toolShellPaddingY?: 0 | 1;
+	toolShellSpacingY?: 0 | 1;
 }
 
 export class ToolExecutionComponent extends Container {
@@ -63,6 +64,7 @@ export class ToolExecutionComponent extends Container {
 	private showImages: boolean;
 	private imageWidthCells: number;
 	private toolShellPaddingY: 0 | 1;
+	private toolShellSpacingY: 0 | 1;
 	private isPartial = true;
 	private toolDefinition?: ToolRenderers;
 	private ui: TUI;
@@ -94,10 +96,11 @@ export class ToolExecutionComponent extends Container {
 		this.showImages = options.showImages ?? true;
 		this.imageWidthCells = options.imageWidthCells ?? 60;
 		this.toolShellPaddingY = options.toolShellPaddingY === 0 ? 0 : 1;
+		this.toolShellSpacingY = options.toolShellSpacingY === 0 ? 0 : 1;
 		this.ui = ui;
 		this.cwd = cwd;
 
-		this.addChild(new Spacer(1));
+		if (this.toolShellSpacingY > 0) this.addChild(new Spacer(this.toolShellSpacingY));
 
 		// Always create all shell variants. contentBox is used for default renderer-based composition.
 		// selfRenderContainer is used when the tool renders its own framing.
@@ -268,7 +271,7 @@ export class ToolExecutionComponent extends Container {
 
 			const lines: string[] = [];
 			if (contentLines.length > 0) {
-				lines.push("");
+				for (let i = 0; i < this.toolShellSpacingY; i++) lines.push("");
 				lines.push(...contentLines);
 			}
 			for (let i = 0; i < this.imageComponents.length; i++) {
@@ -289,10 +292,12 @@ export class ToolExecutionComponent extends Container {
 
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.hasRendererDefinition() || this.getRenderShell() !== "self") return super.handleMouse(event);
-		if (event.y <= 0 || event.y > this.selfRenderHeight) return undefined;
+		if (event.y < this.toolShellSpacingY || event.y >= this.toolShellSpacingY + this.selfRenderHeight) {
+			return undefined;
+		}
 		return this.selfRenderContainer.handleMouse({
 			...event,
-			y: event.y - 1,
+			y: event.y - this.toolShellSpacingY,
 			height: this.selfRenderHeight,
 		});
 	}

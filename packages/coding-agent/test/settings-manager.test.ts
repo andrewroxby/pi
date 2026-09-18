@@ -518,6 +518,25 @@ describe("SettingsManager", () => {
 		});
 	});
 
+	describe("toolShellSpacingY", () => {
+		it("defaults to 1 and accepts flush tool shells", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+
+			expect(manager.getToolShellSpacingY()).toBe(1);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: 0 }));
+			const compactManager = SettingsManager.create(projectDir, agentDir);
+			expect(compactManager.getToolShellSpacingY()).toBe(0);
+		});
+
+		it("treats unsupported values as default spacing", () => {
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: 2 }));
+
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getToolShellSpacingY()).toBe(1);
+		});
+	});
+
 	describe("markdown.mermaid", () => {
 		it("defaults to streaming and persists rendering modes", async () => {
 			const manager = SettingsManager.create(projectDir, agentDir);
