@@ -50,7 +50,9 @@ type RenderSessionContextThis = {
 	toolOutputExpanded: boolean;
 	isInitialized: boolean;
 	updateEditorBorderColor(): void;
-	getRegisteredToolDefinition(toolName: string): undefined;
+	getRegisteredToolDefinition(
+		toolName: string,
+	): { renderShell?: "default" | "self"; renderCall?: () => Text } | undefined;
 	maybeShowAssistantDiagnostics(message: AssistantMessage): void;
 	addMessageToChat(message: AgentMessage, options?: { populateHistory?: boolean }): void;
 	renderSessionItems: RenderSessionItems;
@@ -151,6 +153,9 @@ describe("InteractiveMode.renderSessionEntries", () => {
 	test("groups consecutive tool shells but separates a new run after assistant content", () => {
 		const fakeThis = createFakeInteractiveModeThis();
 		fakeThis.settingsManager.getToolShellSpacingY = () => "grouped";
+		// Grouping only closes the gap between self-rendered rows, so the rows under
+		// test have to draw their own framing.
+		fakeThis.getRegisteredToolDefinition = () => ({ renderShell: "self", renderCall: () => new Text("call", 0, 0) });
 		const firstMessage = createAssistantToolCallMessage();
 		firstMessage.content = [
 			{ type: "toolCall", id: "grouped-first", name: TOOL_NAME, arguments: {} },

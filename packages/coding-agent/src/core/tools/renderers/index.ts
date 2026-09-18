@@ -16,7 +16,7 @@ import { lsRenderers } from "./ls.ts";
 import { readRenderers } from "./read.ts";
 import { writeRenderers } from "./write.ts";
 
-export type ToolRenderers = Pick<ToolDefinition<any, any>, "renderCall" | "renderResult">;
+export type ToolRenderers = Pick<ToolDefinition<any, any>, "renderCall" | "renderResult" | "renderShell">;
 
 export {
 	createShellRenderers,

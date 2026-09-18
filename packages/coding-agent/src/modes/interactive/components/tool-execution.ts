@@ -135,6 +135,11 @@ export class ToolExecutionComponent extends Container {
 		return this.toolDefinition?.renderShell ?? "default";
 	}
 
+	/** Whether this row draws its own framing rather than Pi's default tool shell. */
+	selfRenders(): boolean {
+		return this.getRenderShell() === "self";
+	}
+
 	private getRenderContext(lastComponent: Component | undefined): ToolRenderContext {
 		return {
 			args: this.args,

@@ -3261,6 +3261,7 @@ export class InteractiveMode {
 										toolShellSpacingY: resolveToolShellSpacingY(
 											this.settingsManager,
 											this.chatContainer.children,
+											this.getRegisteredToolDefinition(content.name),
 										),
 									},
 									this.getRegisteredToolDefinition(content.name),
@@ -3338,7 +3339,11 @@ export class InteractiveMode {
 							showImages: this.settingsManager.getShowImages(),
 							imageWidthCells: this.settingsManager.getImageWidthCells(),
 							toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
-							toolShellSpacingY: resolveToolShellSpacingY(this.settingsManager, this.chatContainer.children),
+							toolShellSpacingY: resolveToolShellSpacingY(
+								this.settingsManager,
+								this.chatContainer.children,
+								this.getRegisteredToolDefinition(event.toolName),
+							),
 						},
 						this.getRegisteredToolDefinition(event.toolName),
 						this.ui,
@@ -3733,7 +3738,11 @@ export class InteractiveMode {
 								showImages: this.settingsManager.getShowImages(),
 								imageWidthCells: this.settingsManager.getImageWidthCells(),
 								toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
-								toolShellSpacingY: resolveToolShellSpacingY(this.settingsManager, this.chatContainer.children),
+								toolShellSpacingY: resolveToolShellSpacingY(
+									this.settingsManager,
+									this.chatContainer.children,
+									this.getRegisteredToolDefinition(content.name),
+								),
 							},
 							this.getRegisteredToolDefinition(content.name),
 							this.ui,

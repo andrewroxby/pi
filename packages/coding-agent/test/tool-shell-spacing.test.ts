@@ -1,5 +1,5 @@
 import type { AssistantMessage } from "@earendil-works/pi-ai";
-import type { Component, TUI } from "@earendil-works/pi-tui";
+import { type Component, Text, type TUI } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, test } from "vitest";
 import type { ToolShellSpacing } from "../src/core/settings-manager.ts";
 import { AssistantMessageComponent } from "../src/modes/interactive/components/assistant-message.ts";
@@ -31,13 +31,13 @@ function settings(spacing: ToolShellSpacing) {
 	return { getToolShellSpacingY: () => spacing };
 }
 
-function createTool(id: string): ToolExecutionComponent {
+function createTool(id: string, renderShell: "default" | "self" = "self"): ToolExecutionComponent {
 	return new ToolExecutionComponent(
 		"test_tool",
 		id,
 		{},
 		{},
-		undefined,
+		{ renderShell, renderCall: () => new Text("call", 0, 0) },
 		{ requestRender() {} } as unknown as TUI,
 		process.cwd(),
 	);
@@ -50,16 +50,32 @@ describe("resolveToolShellSpacingY", () => {
 
 	test("preserves explicit uniform spacing modes", () => {
 		const transcript: Component[] = [createTool("existing")];
-		expect(resolveToolShellSpacingY(settings(0), transcript)).toBe(0);
-		expect(resolveToolShellSpacingY(settings(1), transcript)).toBe(1);
+		expect(resolveToolShellSpacingY(settings(0), transcript, { renderShell: "self" })).toBe(0);
+		expect(resolveToolShellSpacingY(settings(1), transcript, { renderShell: "self" })).toBe(1);
+	});
+
+	test("keeps a blank row on both sides of a default tool shell", () => {
+		const transcript: Component[] = [createTool("self-first")];
+
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "default" })).toBe(1);
+
+		transcript.push(createTool("default-shell", "default"));
+		expect(
+			resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" }),
+			"a self-rendered tool after a default shell keeps the trailing row",
+		).toBe(1);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "default" })).toBe(1);
+
+		transcript.push(createTool("self-after"));
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(0);
 	});
 
 	test("separates a tool run from thinking or prose and groups consecutive tools", () => {
 		const transcript: Component[] = [];
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(1);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(1);
 
 		transcript.push(createTool("first"));
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(0);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(0);
 
 		const toolOnlyAssistant = new AssistantMessageComponent(
 			createAssistantMessage([{ type: "toolCall", id: "second", name: "test_tool", arguments: {} }]),
@@ -67,7 +83,7 @@ describe("resolveToolShellSpacingY", () => {
 		);
 		expect(toolOnlyAssistant.hasVisibleRows()).toBe(false);
 		transcript.push(toolOnlyAssistant);
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(0);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(0);
 
 		const thinkingAssistant = new AssistantMessageComponent(
 			createAssistantMessage([
@@ -78,10 +94,10 @@ describe("resolveToolShellSpacingY", () => {
 		);
 		expect(thinkingAssistant.hasVisibleRows()).toBe(true);
 		transcript.push(thinkingAssistant);
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(1);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(1);
 
 		transcript.push(createTool("third"));
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(0);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(0);
 
 		const proseAssistant = new AssistantMessageComponent(
 			createAssistantMessage([
@@ -92,6 +108,6 @@ describe("resolveToolShellSpacingY", () => {
 		);
 		expect(proseAssistant.hasVisibleRows()).toBe(true);
 		transcript.push(proseAssistant);
-		expect(resolveToolShellSpacingY(settings("grouped"), transcript)).toBe(1);
+		expect(resolveToolShellSpacingY(settings("grouped"), transcript, { renderShell: "self" })).toBe(1);
 	});
 });
