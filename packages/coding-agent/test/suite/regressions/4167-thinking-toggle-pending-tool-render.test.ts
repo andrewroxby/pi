@@ -4,7 +4,7 @@ import { Container, Text, type TUI } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 import type { AgentSessionEvent } from "../../../src/core/agent-session.ts";
 import type { SessionEntry } from "../../../src/core/session-manager.ts";
-import type { ToolExecutionComponent } from "../../../src/modes/interactive/components/tool-execution.ts";
+import { ToolExecutionComponent } from "../../../src/modes/interactive/components/tool-execution.ts";
 import { InteractiveMode } from "../../../src/modes/interactive/interactive-mode.ts";
 import { initTheme } from "../../../src/modes/interactive/theme/theme.ts";
 import { stripAnsi } from "../../../src/utils/ansi.ts";
@@ -42,7 +42,7 @@ type RenderSessionContextThis = {
 		getShowImages(): boolean;
 		getImageWidthCells(): number;
 		getToolShellPaddingY(): 0 | 1;
-		getToolShellSpacingY(): 0 | 1;
+		getToolShellSpacingY(): 0 | 1 | "grouped";
 		getShowCacheMissNotices(): boolean;
 	};
 	sessionManager: { getCwd(): string; getEntries(): SessionEntry[] };
@@ -146,6 +146,34 @@ function renderChat(container: Container): string {
 describe("InteractiveMode.renderSessionEntries", () => {
 	beforeAll(() => {
 		initTheme("dark");
+	});
+
+	test("groups consecutive tool shells but separates a new run after assistant content", () => {
+		const fakeThis = createFakeInteractiveModeThis();
+		fakeThis.settingsManager.getToolShellSpacingY = () => "grouped";
+		const firstMessage = createAssistantToolCallMessage();
+		firstMessage.content = [
+			{ type: "toolCall", id: "grouped-first", name: TOOL_NAME, arguments: {} },
+			{ type: "toolCall", id: "grouped-second", name: TOOL_NAME, arguments: {} },
+		];
+
+		fakeThis.renderSessionItems.call(fakeThis, [firstMessage]);
+		let tools = fakeThis.chatContainer.children.filter(
+			(component): component is ToolExecutionComponent => component instanceof ToolExecutionComponent,
+		);
+		expect(stripAnsi(tools[0]?.render(80)[0] ?? "not rendered")).toBe("");
+		expect(stripAnsi(tools[1]?.render(80)[0] ?? "")).not.toBe("");
+
+		const proseMessage = createAssistantToolCallMessage();
+		proseMessage.content = [
+			{ type: "text", text: "explanation" },
+			{ type: "toolCall", id: "grouped-after-prose", name: TOOL_NAME, arguments: {} },
+		];
+		fakeThis.renderSessionItems.call(fakeThis, [proseMessage]);
+		tools = fakeThis.chatContainer.children.filter(
+			(component): component is ToolExecutionComponent => component instanceof ToolExecutionComponent,
+		);
+		expect(stripAnsi(tools.at(-1)?.render(80)[0] ?? "not rendered")).toBe("");
 	});
 
 	test("keeps unresolved rendered tool calls registered for live completion events", async () => {

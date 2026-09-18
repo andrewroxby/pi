@@ -91,6 +91,8 @@ export type PackageSource =
 			themes?: string[];
 	  };
 
+export type ToolShellSpacing = 0 | 1 | "grouped";
+
 export interface Settings {
 	lastChangelogVersion?: string;
 	defaultProvider?: string;
@@ -132,7 +134,7 @@ export interface Settings {
 	editorPaddingX?: number; // Horizontal padding for input editor (default: 0)
 	outputPad?: 0 | 1; // Horizontal padding for chat message output (default: 1)
 	toolShellPaddingY?: 0 | 1; // Vertical padding for default tool shells (default: 1)
-	toolShellSpacingY?: 0 | 1; // Blank rows before tool shells (default: 1)
+	toolShellSpacingY?: ToolShellSpacing; // Blank rows before tool shells, or grouped tool runs (default: 1)
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
@@ -1339,8 +1341,9 @@ export class SettingsManager {
 		return this.settings.toolShellPaddingY === 0 ? 0 : 1;
 	}
 
-	getToolShellSpacingY(): 0 | 1 {
-		return this.settings.toolShellSpacingY === 0 ? 0 : 1;
+	getToolShellSpacingY(): ToolShellSpacing {
+		const spacing = this.settings.toolShellSpacingY;
+		return spacing === 0 || spacing === "grouped" ? spacing : 1;
 	}
 
 	getAutocompleteMaxVisible(): number {

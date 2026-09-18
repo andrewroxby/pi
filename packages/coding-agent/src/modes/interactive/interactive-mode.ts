@@ -171,6 +171,7 @@ import {
 	theme,
 } from "./theme/theme.ts";
 import { InteractiveThemeController } from "./theme/theme-controller.ts";
+import { resolveToolShellSpacingY } from "./tool-shell-spacing.ts";
 import { createInteractiveTui, createInteractiveTuiReference } from "./tui-renderer.ts";
 
 export { createInteractiveTui, createInteractiveTuiReference } from "./tui-renderer.ts";
@@ -3257,7 +3258,10 @@ export class InteractiveMode {
 										showImages: this.settingsManager.getShowImages(),
 										imageWidthCells: this.settingsManager.getImageWidthCells(),
 										toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
-										toolShellSpacingY: this.settingsManager.getToolShellSpacingY(),
+										toolShellSpacingY: resolveToolShellSpacingY(
+											this.settingsManager,
+											this.chatContainer.children,
+										),
 									},
 									this.getRegisteredToolDefinition(content.name),
 									this.ui,
@@ -3334,7 +3338,7 @@ export class InteractiveMode {
 							showImages: this.settingsManager.getShowImages(),
 							imageWidthCells: this.settingsManager.getImageWidthCells(),
 							toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
-							toolShellSpacingY: this.settingsManager.getToolShellSpacingY(),
+							toolShellSpacingY: resolveToolShellSpacingY(this.settingsManager, this.chatContainer.children),
 						},
 						this.getRegisteredToolDefinition(event.toolName),
 						this.ui,
@@ -3729,7 +3733,7 @@ export class InteractiveMode {
 								showImages: this.settingsManager.getShowImages(),
 								imageWidthCells: this.settingsManager.getImageWidthCells(),
 								toolShellPaddingY: this.settingsManager.getToolShellPaddingY(),
-								toolShellSpacingY: this.settingsManager.getToolShellSpacingY(),
+								toolShellSpacingY: resolveToolShellSpacingY(this.settingsManager, this.chatContainer.children),
 							},
 							this.getRegisteredToolDefinition(content.name),
 							this.ui,

@@ -519,7 +519,7 @@ describe("SettingsManager", () => {
 	});
 
 	describe("toolShellSpacingY", () => {
-		it("defaults to 1 and accepts flush tool shells", () => {
+		it("defaults to 1 and accepts flush or grouped tool shells", () => {
 			const manager = SettingsManager.create(projectDir, agentDir);
 
 			expect(manager.getToolShellSpacingY()).toBe(1);
@@ -527,6 +527,10 @@ describe("SettingsManager", () => {
 			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: 0 }));
 			const compactManager = SettingsManager.create(projectDir, agentDir);
 			expect(compactManager.getToolShellSpacingY()).toBe(0);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: "grouped" }));
+			const groupedManager = SettingsManager.create(projectDir, agentDir);
+			expect(groupedManager.getToolShellSpacingY()).toBe("grouped");
 		});
 
 		it("treats unsupported values as default spacing", () => {
