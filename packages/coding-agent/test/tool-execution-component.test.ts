@@ -139,6 +139,30 @@ describe("ToolExecutionComponent parity", () => {
 		expect(render("row", true)[0]).toContain(theme.getFgAnsi("error"));
 	});
 
+	test("row style leaves self-rendered tools to their own markers", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderShell: "self",
+			renderCall: () => new Text("  \u2022 self call", 0, 0),
+			renderResult: () => new Text("  \u2514 self result", 0, 0),
+		};
+		const component = new ToolExecutionComponent(
+			"custom_tool",
+			"row-style-self",
+			{},
+			{ toolShellPaddingY: 0, toolShellSpacingY: 0, toolShellStyle: "row" },
+			toolDefinition,
+			createFakeTui(),
+			process.cwd(),
+		);
+		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+
+		expect(component.render(40).map((line) => stripAnsi(line).trimEnd())).toEqual([
+			"  \u2022 self call",
+			"  \u2514 self result",
+		]);
+	});
+
 	test("row style narrows framed content so no line exceeds the width", () => {
 		const long = "x".repeat(200);
 		const toolDefinition: ToolDefinition = {

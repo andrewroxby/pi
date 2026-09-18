@@ -163,9 +163,10 @@ export class ToolExecutionComponent extends Container {
 		return `  ${theme.fg("muted", "\u2514")} `;
 	}
 
-	/** Wrap default-shell content in the row frame; box style passes it through. */
+	/** Wrap default-shell content in the row frame. A self-rendered tool owns its
+	 * own markers and indent, so framing it again would double both. */
 	private framed(component: Component, kind: "call" | "result"): Component {
-		if (this.toolShellStyle !== "row") return component;
+		if (this.toolShellStyle !== "row" || this.getRenderShell() === "self") return component;
 		return new ToolRowFrame(component, kind === "call" ? () => this.callMarker() : () => this.resultMarker());
 	}
 
