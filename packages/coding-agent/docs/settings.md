@@ -66,6 +66,7 @@ Use `/trust` in interactive mode to save a project trust decision for future ses
 | `outputPad` | number | `1` | Horizontal padding for user messages, assistant messages, and thinking (0 or 1) |
 | `toolShellPaddingY` | number | `1` | Vertical padding above and below default tool shells (0 or 1); self-rendering tools are unaffected |
 | `toolShellSpacingY` | number \| string | `1` | Leading blank rows for default and self-rendered tool shells: `0`, `1`, or `"grouped"` (one row before a tool run, none between consecutive tools) |
+| `toolShellStyle` | string | `"box"` | Default tool shell framing: `"box"` keeps the inset, tinted shell; `"row"` frames it as a transcript row with a status bullet and an aligned indent, and lets `toolShellSpacingY: "grouped"` group it. Self-rendering tools are unaffected |
 | `autocompleteMaxVisible` | number | `5` | Max visible items in autocomplete dropdown (3-20) |
 | `showHardwareCursor` | boolean | `false` | Show the terminal cursor while TUI positions it for IME support |
 | `tuiMode` | string | `"regular"` | Interactive TUI mode: `"regular"` or experimental `"fullscreen"`. Changes from `/settings` apply immediately; `--tui-mode` overrides this setting at startup |

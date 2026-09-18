@@ -43,6 +43,7 @@ type RenderSessionContextThis = {
 		getImageWidthCells(): number;
 		getToolShellPaddingY(): 0 | 1;
 		getToolShellSpacingY(): 0 | 1 | "grouped";
+		getToolShellStyle(): "box" | "row";
 		getShowCacheMissNotices(): boolean;
 	};
 	sessionManager: { getCwd(): string; getEntries(): SessionEntry[] };
@@ -78,6 +79,7 @@ function createFakeInteractiveModeThis(): RenderSessionContextThis {
 			getImageWidthCells: () => 60,
 			getToolShellPaddingY: () => 1,
 			getToolShellSpacingY: () => 1,
+			getToolShellStyle: () => "box" as const,
 			getShowCacheMissNotices: () => false,
 		},
 		sessionManager: { getCwd: () => process.cwd(), getEntries: () => [] },

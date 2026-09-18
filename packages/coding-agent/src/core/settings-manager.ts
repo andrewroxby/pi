@@ -93,6 +93,8 @@ export type PackageSource =
 
 export type ToolShellSpacing = 0 | 1 | "grouped";
 
+export type ToolShellStyle = "box" | "row";
+
 export interface Settings {
 	lastChangelogVersion?: string;
 	defaultProvider?: string;
@@ -135,6 +137,7 @@ export interface Settings {
 	outputPad?: 0 | 1; // Horizontal padding for chat message output (default: 1)
 	toolShellPaddingY?: 0 | 1; // Vertical padding for default tool shells (default: 1)
 	toolShellSpacingY?: ToolShellSpacing; // Blank rows before tool shells, or grouped tool runs (default: 1)
+	toolShellStyle?: ToolShellStyle; // Default tool shell framing: inset box, or transcript row (default: "box")
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
@@ -1344,6 +1347,10 @@ export class SettingsManager {
 	getToolShellSpacingY(): ToolShellSpacing {
 		const spacing = this.settings.toolShellSpacingY;
 		return spacing === 0 || spacing === "grouped" ? spacing : 1;
+	}
+
+	getToolShellStyle(): ToolShellStyle {
+		return this.settings.toolShellStyle === "row" ? "row" : "box";
 	}
 
 	getAutocompleteMaxVisible(): number {

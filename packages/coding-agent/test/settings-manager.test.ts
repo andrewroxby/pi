@@ -518,6 +518,18 @@ describe("SettingsManager", () => {
 		});
 	});
 
+	describe("toolShellStyle", () => {
+		it("defaults to box, honors row, and clamps anything else", () => {
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("box");
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellStyle: "row" }));
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("row");
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellStyle: "rows" }));
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("box");
+		});
+	});
+
 	describe("toolShellSpacingY", () => {
 		it("defaults to 1 and accepts flush or grouped tool shells", () => {
 			const manager = SettingsManager.create(projectDir, agentDir);

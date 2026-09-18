@@ -27,8 +27,8 @@ function createAssistantMessage(content: AssistantMessage["content"]): Assistant
 	};
 }
 
-function settings(spacing: ToolShellSpacing) {
-	return { getToolShellSpacingY: () => spacing };
+function settings(spacing: ToolShellSpacing, style: "box" | "row" = "box") {
+	return { getToolShellSpacingY: () => spacing, getToolShellStyle: () => style };
 }
 
 function createTool(id: string, renderShell: "default" | "self" = "self"): ToolExecutionComponent {
@@ -52,6 +52,19 @@ describe("resolveToolShellSpacingY", () => {
 		const transcript: Component[] = [createTool("existing")];
 		expect(resolveToolShellSpacingY(settings(0), transcript, { renderShell: "self" })).toBe(0);
 		expect(resolveToolShellSpacingY(settings(1), transcript, { renderShell: "self" })).toBe(1);
+	});
+
+	test("groups default shells with everything else once they are framed as rows", () => {
+		const transcript: Component[] = [createTool("self-first")];
+		const rows = settings("grouped", "row");
+
+		transcript.push(createTool("default-shell", "default"));
+		expect(resolveToolShellSpacingY(rows, transcript, { renderShell: "default" })).toBe(0);
+		expect(resolveToolShellSpacingY(rows, transcript, { renderShell: "self" })).toBe(0);
+		expect(
+			resolveToolShellSpacingY(settings("grouped", "box"), transcript, { renderShell: "self" }),
+			"the box shell still earns its separator",
+		).toBe(1);
 	});
 
 	test("keeps a blank row on both sides of a default tool shell", () => {
