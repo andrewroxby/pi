@@ -81,6 +81,9 @@ See [Compaction Reference](compaction.md) for trigger, summarization, and valida
 | `fullscreenCopyOnSelect` | boolean | `true` | Copy selected text automatically in fullscreen mode. |
 | `editorPaddingX` | number | `0` | Horizontal editor padding from 0 to 3 cells. |
 | `outputPad` | `0 \| 1` | `1` | Horizontal transcript padding. |
+| `toolShellPaddingY` | `0 \| 1` | `1` | Vertical padding above and below default tool shells. Self-rendering tools are unaffected. |
+| `toolShellSpacingY` | `0 \| 1 \| "grouped"` | `1` | Leading blank rows for tool shells. `"grouped"` keeps one row before a tool run and none between consecutive self-rendered tools. |
+| `toolShellStyle` | `"box" \| "row"` | `"box"` | Default tool shell framing. `"row"` uses a transcript status row; self-rendering tools are unaffected. |
 | `autocompleteMaxVisible` | number | `5` | Visible autocomplete entries, from 3 to 20. |
 | `showHardwareCursor` | boolean | `false` | Show the terminal cursor while Pi positions it for input methods. |
 | `terminal.showImages` | boolean | `true` | Display inline images when supported. |

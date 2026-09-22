@@ -539,6 +539,60 @@ describe("SettingsManager", () => {
 		});
 	});
 
+	describe("toolShellPaddingY", () => {
+		it("defaults to 1 and accepts compact default tool shells", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+
+			expect(manager.getToolShellPaddingY()).toBe(1);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellPaddingY: 0 }));
+			const compactManager = SettingsManager.create(projectDir, agentDir);
+			expect(compactManager.getToolShellPaddingY()).toBe(0);
+		});
+
+		it("treats unsupported values as default padding", () => {
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellPaddingY: 2 }));
+
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getToolShellPaddingY()).toBe(1);
+		});
+	});
+
+	describe("toolShellStyle", () => {
+		it("defaults to box, honors row, and clamps anything else", () => {
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("box");
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellStyle: "row" }));
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("row");
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellStyle: "rows" }));
+			expect(SettingsManager.create(projectDir, agentDir).getToolShellStyle()).toBe("box");
+		});
+	});
+
+	describe("toolShellSpacingY", () => {
+		it("defaults to 1 and accepts flush or grouped tool shells", () => {
+			const manager = SettingsManager.create(projectDir, agentDir);
+
+			expect(manager.getToolShellSpacingY()).toBe(1);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: 0 }));
+			const compactManager = SettingsManager.create(projectDir, agentDir);
+			expect(compactManager.getToolShellSpacingY()).toBe(0);
+
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: "grouped" }));
+			const groupedManager = SettingsManager.create(projectDir, agentDir);
+			expect(groupedManager.getToolShellSpacingY()).toBe("grouped");
+		});
+
+		it("treats unsupported values as default spacing", () => {
+			writeFileSync(join(agentDir, "settings.json"), JSON.stringify({ toolShellSpacingY: 2 }));
+
+			const manager = SettingsManager.create(projectDir, agentDir);
+			expect(manager.getToolShellSpacingY()).toBe(1);
+		});
+	});
+
 	describe("markdown.mermaid", () => {
 		it("defaults to streaming and persists rendering modes", async () => {
 			const manager = SettingsManager.create(projectDir, agentDir);

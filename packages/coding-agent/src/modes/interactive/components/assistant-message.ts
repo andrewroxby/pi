@@ -77,6 +77,11 @@ export class AssistantMessageComponent extends Container {
 		}
 	}
 
+	/** Whether this message contributes visible transcript rows before separately rendered tools. */
+	hasVisibleRows(): boolean {
+		return this.contentContainer.children.length > 0;
+	}
+
 	override render(width: number): string[] {
 		const lines = super.render(width);
 		if (this.hasToolCalls || lines.length === 0) {

@@ -4,7 +4,7 @@ import { Container, Text, type TUI } from "@earendil-works/pi-tui";
 import { beforeAll, describe, expect, test, vi } from "vitest";
 import type { AgentSessionEvent } from "../../../src/core/agent-session.ts";
 import type { SessionEntry } from "../../../src/core/session-manager.ts";
-import type { ToolExecutionComponent } from "../../../src/modes/interactive/components/tool-execution.ts";
+import { ToolExecutionComponent } from "../../../src/modes/interactive/components/tool-execution.ts";
 import { InteractiveMode } from "../../../src/modes/interactive/interactive-mode.ts";
 import { initTheme } from "../../../src/modes/interactive/theme/theme.ts";
 import { stripAnsi } from "../../../src/utils/ansi.ts";
@@ -41,6 +41,9 @@ type RenderSessionContextThis = {
 	settingsManager: {
 		getShowImages(): boolean;
 		getImageWidthCells(): number;
+		getToolShellPaddingY(): 0 | 1;
+		getToolShellSpacingY(): 0 | 1 | "grouped";
+		getToolShellStyle(): "box" | "row";
 		getShowCacheMissNotices(): boolean;
 	};
 	sessionManager: { getCwd(): string; getEntries(): SessionEntry[] };
@@ -48,7 +51,9 @@ type RenderSessionContextThis = {
 	toolOutputExpanded: boolean;
 	isInitialized: boolean;
 	updateEditorBorderColor(): void;
-	getRegisteredToolDefinition(toolName: string): undefined;
+	getRegisteredToolDefinition(
+		toolName: string,
+	): { renderShell?: "default" | "self"; renderCall?: () => Text } | undefined;
 	maybeShowAssistantDiagnostics(message: AssistantMessage): void;
 	addMessageToChat(message: AgentMessage, options?: { populateHistory?: boolean }): void;
 	renderSessionItems: RenderSessionItems;
@@ -72,6 +77,9 @@ function createFakeInteractiveModeThis(): RenderSessionContextThis {
 		settingsManager: {
 			getShowImages: () => false,
 			getImageWidthCells: () => 60,
+			getToolShellPaddingY: () => 1,
+			getToolShellSpacingY: () => 1,
+			getToolShellStyle: () => "box" as const,
 			getShowCacheMissNotices: () => false,
 		},
 		sessionManager: { getCwd: () => process.cwd(), getEntries: () => [] },
@@ -142,6 +150,37 @@ function renderChat(container: Container): string {
 describe("InteractiveMode.renderSessionEntries", () => {
 	beforeAll(() => {
 		initTheme("dark");
+	});
+
+	test("groups consecutive tool shells but separates a new run after assistant content", () => {
+		const fakeThis = createFakeInteractiveModeThis();
+		fakeThis.settingsManager.getToolShellSpacingY = () => "grouped";
+		// Grouping only closes the gap between self-rendered rows, so the rows under
+		// test have to draw their own framing.
+		fakeThis.getRegisteredToolDefinition = () => ({ renderShell: "self", renderCall: () => new Text("call", 0, 0) });
+		const firstMessage = createAssistantToolCallMessage();
+		firstMessage.content = [
+			{ type: "toolCall", id: "grouped-first", name: TOOL_NAME, arguments: {} },
+			{ type: "toolCall", id: "grouped-second", name: TOOL_NAME, arguments: {} },
+		];
+
+		fakeThis.renderSessionItems.call(fakeThis, [firstMessage]);
+		let tools = fakeThis.chatContainer.children.filter(
+			(component): component is ToolExecutionComponent => component instanceof ToolExecutionComponent,
+		);
+		expect(stripAnsi(tools[0]?.render(80)[0] ?? "not rendered")).toBe("");
+		expect(stripAnsi(tools[1]?.render(80)[0] ?? "")).not.toBe("");
+
+		const proseMessage = createAssistantToolCallMessage();
+		proseMessage.content = [
+			{ type: "text", text: "explanation" },
+			{ type: "toolCall", id: "grouped-after-prose", name: TOOL_NAME, arguments: {} },
+		];
+		fakeThis.renderSessionItems.call(fakeThis, [proseMessage]);
+		tools = fakeThis.chatContainer.children.filter(
+			(component): component is ToolExecutionComponent => component instanceof ToolExecutionComponent,
+		);
+		expect(stripAnsi(tools.at(-1)?.render(80)[0] ?? "not rendered")).toBe("");
 	});
 
 	test("keeps unresolved rendered tool calls registered for live completion events", async () => {

@@ -13,6 +13,7 @@ import {
 } from "@earendil-works/pi-tui";
 import type { ToolDefinition, ToolRenderContext, ToolRenderResultOptions } from "../../../core/extensions/types.ts";
 import type { Theme } from "../theme/theme.ts";
+import { ToolRowFrame } from "./tool-row-frame.ts";
 
 /**
  * What this component needs from a tool: how to draw it. It neither executes tools nor reads their
@@ -42,12 +43,17 @@ const FALLBACK_PREVIEW_LINES = 10;
 export interface ToolExecutionOptions {
 	showImages?: boolean;
 	imageWidthCells?: number;
+	toolShellPaddingY?: 0 | 1;
+	toolShellSpacingY?: 0 | 1;
+	/** "box" keeps the inset, tinted default shell; "row" frames it as a transcript row. */
+	toolShellStyle?: "box" | "row";
 }
 
 export class ToolExecutionComponent extends Container {
 	private contentBox: Box;
 	private contentText: Text;
 	private contentTextRegion: MouseRegion;
+	private rowContainer: Container;
 	private selfRenderContainer: Container;
 	private selfRenderHeight = 0;
 	private callRendererComponent?: Component;
@@ -61,6 +67,9 @@ export class ToolExecutionComponent extends Container {
 	private expanded = false;
 	private showImages: boolean;
 	private imageWidthCells: number;
+	private toolShellPaddingY: 0 | 1;
+	private toolShellSpacingY: 0 | 1;
+	private toolShellStyle: "box" | "row";
 	private isPartial = true;
 	private toolDefinition?: ToolRenderers;
 	private ui: TUI;
@@ -94,24 +103,28 @@ export class ToolExecutionComponent extends Container {
 		this.toolDefinition = toolDefinition;
 		this.showImages = options.showImages ?? true;
 		this.imageWidthCells = options.imageWidthCells ?? 60;
+		this.toolShellPaddingY = options.toolShellPaddingY === 0 ? 0 : 1;
+		this.toolShellSpacingY = options.toolShellSpacingY === 0 ? 0 : 1;
+		this.toolShellStyle = options.toolShellStyle === "row" ? "row" : "box";
 		this.ui = ui;
 		this.cwd = cwd;
 
-		this.addChild(new Spacer(1));
+		if (this.toolShellSpacingY > 0) this.addChild(new Spacer(this.toolShellSpacingY));
 
-		// Always create all shell variants. contentBox is used for default renderer-based composition.
+		// Always create all shell variants. contentBox is used for default renderer-based composition,
+		// rowContainer for the row-style default shell, which trades the box for a marker and indent.
 		// selfRenderContainer is used when the tool renders its own framing.
 		// contentText is reserved for generic fallback rendering when no tool definition exists.
-		this.contentBox = new Box(1, 1, (text: string) => theme.bg("toolPendingBg", text));
-		this.contentText = new Text("", 1, 1, (text: string) => theme.bg("toolPendingBg", text));
+		const isRow = this.toolShellStyle === "row";
+		this.contentBox = new Box(1, this.toolShellPaddingY, (text: string) => theme.bg("toolPendingBg", text));
+		this.contentText = isRow
+			? new Text("", 0, 0)
+			: new Text("", 1, this.toolShellPaddingY, (text: string) => theme.bg("toolPendingBg", text));
 		this.contentTextRegion = this.createResultRegion(this.contentText);
+		this.rowContainer = new Container();
 		this.selfRenderContainer = new Container();
 
-		if (this.hasRendererDefinition()) {
-			this.addChild(this.getRenderShell() === "self" ? this.selfRenderContainer : this.contentBox);
-		} else {
-			this.addChild(this.contentTextRegion);
-		}
+		this.addChild(this.getRenderShell() === "self" ? this.selfRenderContainer : this.defaultShellChild());
 
 		this.updateDisplay();
 	}
@@ -130,6 +143,34 @@ export class ToolExecutionComponent extends Container {
 
 	private getRenderShell(): "default" | "self" {
 		return this.toolDefinition?.renderShell ?? "default";
+	}
+
+	/** Whether this row draws its own framing rather than Pi's default tool shell. */
+	selfRenders(): boolean {
+		return this.getRenderShell() === "self";
+	}
+
+	private defaultShellChild(): Component {
+		if (this.toolShellStyle === "row") return this.rowContainer;
+		return this.hasRendererDefinition() ? this.contentBox : this.contentTextRegion;
+	}
+
+	/** Row marker for a call line: the execution bullet, colored by outcome. */
+	private callMarker(): string {
+		const color = this.isPartial ? "muted" : this.result?.isError ? "error" : "success";
+		return `  ${theme.fg(color, "\u2022")} `;
+	}
+
+	/** Row marker for a result line, aligned under the call bullet. */
+	private resultMarker(): string {
+		return `  ${theme.fg("muted", "\u2514")} `;
+	}
+
+	/** Wrap default-shell content in the row frame. A self-rendered tool owns its
+	 * own markers and indent, so framing it again would double both. */
+	private framed(component: Component, kind: "call" | "result"): Component {
+		if (this.toolShellStyle !== "row" || this.getRenderShell() === "self") return component;
+		return new ToolRowFrame(component, kind === "call" ? () => this.callMarker() : () => this.resultMarker());
 	}
 
 	private getRenderContext(lastComponent: Component | undefined): ToolRenderContext {
@@ -275,7 +316,7 @@ export class ToolExecutionComponent extends Container {
 
 			const lines: string[] = [];
 			if (contentLines.length > 0) {
-				lines.push("");
+				for (let i = 0; i < this.toolShellSpacingY; i++) lines.push("");
 				lines.push(...contentLines);
 			}
 			for (let i = 0; i < this.imageComponents.length; i++) {
@@ -296,10 +337,12 @@ export class ToolExecutionComponent extends Container {
 
 	override handleMouse(event: TuiMouseEvent): ReturnType<Container["handleMouse"]> {
 		if (!this.hasRendererDefinition() || this.getRenderShell() !== "self") return super.handleMouse(event);
-		if (event.y <= 0 || event.y > this.selfRenderHeight) return undefined;
+		if (event.y < this.toolShellSpacingY || event.y >= this.toolShellSpacingY + this.selfRenderHeight) {
+			return undefined;
+		}
 		return this.selfRenderContainer.handleMouse({
 			...event,
-			y: event.y - 1,
+			y: event.y - this.toolShellSpacingY,
 			height: this.selfRenderHeight,
 		});
 	}
@@ -314,7 +357,8 @@ export class ToolExecutionComponent extends Container {
 		let hasContent = false;
 		this.hideComponent = false;
 		if (this.hasRendererDefinition()) {
-			const renderContainer = this.getRenderShell() === "self" ? this.selfRenderContainer : this.contentBox;
+			const renderContainer =
+				this.getRenderShell() === "self" ? this.selfRenderContainer : (this.defaultShellChild() as Container | Box);
 			if (renderContainer instanceof Box) {
 				renderContainer.setBgFn(bgFn);
 			}
@@ -322,17 +366,17 @@ export class ToolExecutionComponent extends Container {
 
 			const callRenderer = this.getCallRenderer();
 			if (!callRenderer) {
-				renderContainer.addChild(this.createResultRegion(this.createCallFallback()));
+				renderContainer.addChild(this.framed(this.createResultRegion(this.createCallFallback()), "call"));
 				hasContent = true;
 			} else {
 				try {
 					const component = callRenderer(this.args, theme, this.getRenderContext(this.callRendererComponent));
 					this.callRendererComponent = component;
-					renderContainer.addChild(this.createResultRegion(component));
+					renderContainer.addChild(this.framed(this.createResultRegion(component), "call"));
 					hasContent = true;
 				} catch {
 					this.callRendererComponent = undefined;
-					renderContainer.addChild(this.createResultRegion(this.createCallFallback()));
+					renderContainer.addChild(this.framed(this.createResultRegion(this.createCallFallback()), "call"));
 					hasContent = true;
 				}
 			}
@@ -342,7 +386,7 @@ export class ToolExecutionComponent extends Container {
 				if (!resultRenderer) {
 					const component = this.createResultFallback();
 					if (component) {
-						renderContainer.addChild(this.createResultRegion(component));
+						renderContainer.addChild(this.framed(this.createResultRegion(component), "result"));
 						hasContent = true;
 					}
 				} else {
@@ -354,18 +398,23 @@ export class ToolExecutionComponent extends Container {
 							this.getRenderContext(this.resultRendererComponent),
 						);
 						this.resultRendererComponent = component;
-						renderContainer.addChild(this.createResultRegion(component));
+						renderContainer.addChild(this.framed(this.createResultRegion(component), "result"));
 						hasContent = true;
 					} catch {
 						this.resultRendererComponent = undefined;
 						const component = this.createResultFallback();
 						if (component) {
-							renderContainer.addChild(this.createResultRegion(component));
+							renderContainer.addChild(this.framed(this.createResultRegion(component), "result"));
 							hasContent = true;
 						}
 					}
 				}
 			}
+		} else if (this.toolShellStyle === "row") {
+			this.contentText.setText(this.formatToolExecution());
+			this.rowContainer.clear();
+			this.rowContainer.addChild(this.framed(this.contentTextRegion, "call"));
+			hasContent = true;
 		} else {
 			this.contentText.setCustomBgFn(bgFn);
 			this.contentText.setText(this.formatToolExecution());

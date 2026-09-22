@@ -114,6 +114,227 @@ describe("ToolExecutionComponent parity", () => {
 		expect(rendered).toContain("custom result");
 	});
 
+	test("configures vertical padding for default tool shells", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderCall: () => new Text("custom call", 0, 0),
+			renderResult: () => new Text("custom result", 0, 0),
+		};
+		const render = (toolShellPaddingY?: 0 | 1, toolShellSpacingY?: 0 | 1) => {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`tool-spacing-${toolShellSpacingY ?? "default"}-padding-${toolShellPaddingY ?? "default"}`,
+				{},
+				{ toolShellPaddingY, toolShellSpacingY },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+			return component.render(120).map((line) => stripAnsi(line));
+		};
+
+		const defaultLines = render();
+		expect(defaultLines).toHaveLength(5);
+		expect(defaultLines.at(-1)?.trim()).toBe("");
+
+		const compactLines = render(0);
+		expect(compactLines).toHaveLength(3);
+		expect(compactLines[0]).toBe("");
+		expect(compactLines[1]).toContain("custom call");
+		expect(compactLines[2]).toContain("custom result");
+		expect(compactLines.at(-1)?.trim()).not.toBe("");
+
+		const flushLines = render(0, 0);
+		expect(flushLines).toHaveLength(2);
+		expect(flushLines[0]).toContain("custom call");
+		expect(flushLines[1]).toContain("custom result");
+	});
+
+	test("row style frames the default shell with a bullet and an aligned indent", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderCall: () => new Text("custom call", 0, 0),
+			renderResult: () => new Text("custom result\nsecond line", 0, 0),
+		};
+		const render = (toolShellStyle: "box" | "row", isError = false) => {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`row-style-${toolShellStyle}-${isError}`,
+				{},
+				{ toolShellPaddingY: 0, toolShellSpacingY: 0, toolShellStyle },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError }, false);
+			return component.render(40);
+		};
+
+		expect(render("row").map((line) => stripAnsi(line).trimEnd())).toEqual([
+			"  \u2022 custom call",
+			"  \u2514 custom result",
+			"    second line",
+		]);
+		expect(render("box").map((line) => stripAnsi(line).trimEnd())).toEqual([
+			" custom call",
+			" custom result",
+			" second line",
+		]);
+		expect(render("row")[0]).toContain(theme.getFgAnsi("success"));
+		expect(render("row", true)[0]).toContain(theme.getFgAnsi("error"));
+	});
+
+	test("row style leaves self-rendered tools to their own markers", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderShell: "self",
+			renderCall: () => new Text("  \u2022 self call", 0, 0),
+			renderResult: () => new Text("  \u2514 self result", 0, 0),
+		};
+		const component = new ToolExecutionComponent(
+			"custom_tool",
+			"row-style-self",
+			{},
+			{ toolShellPaddingY: 0, toolShellSpacingY: 0, toolShellStyle: "row" },
+			toolDefinition,
+			createFakeTui(),
+			process.cwd(),
+		);
+		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+
+		expect(component.render(40).map((line) => stripAnsi(line).trimEnd())).toEqual([
+			"  \u2022 self call",
+			"  \u2514 self result",
+		]);
+	});
+
+	test("row style narrows framed content so no line exceeds the width", () => {
+		const long = "x".repeat(200);
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderCall: () => new Text(long, 0, 0),
+			renderResult: () => new Text(long, 0, 0),
+		};
+		const component = new ToolExecutionComponent(
+			"custom_tool",
+			"row-style-width",
+			{},
+			{ toolShellPaddingY: 0, toolShellSpacingY: 0, toolShellStyle: "row" },
+			toolDefinition,
+			createFakeTui(),
+			process.cwd(),
+		);
+		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+
+		const width = 40;
+		for (const line of component.render(width)) {
+			expect(stripAnsi(line).length).toBeLessThanOrEqual(width);
+		}
+	});
+
+	test("row style keeps default-shell clicks routed to the framed content", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderCall: () => new Text("custom call", 0, 0),
+			renderResult: (_result, { expanded }) => new Text(expanded ? "expanded result" : "collapsed result", 0, 0),
+		};
+		const component = new ToolExecutionComponent(
+			"custom_tool",
+			"row-style-mouse",
+			{},
+			{ toolShellPaddingY: 0, toolShellSpacingY: 0, toolShellStyle: "row" },
+			toolDefinition,
+			createFakeTui(),
+			process.cwd(),
+		);
+		component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+
+		const width = 40;
+		const lines = component.render(width);
+		const resultRow = lines.findIndex((line) => stripAnsi(line).includes("collapsed result"));
+		expect(resultRow).toBeGreaterThanOrEqual(0);
+
+		component.handleMouse({
+			type: "click",
+			button: "left",
+			x: 6,
+			y: resultRow,
+			screenX: 6,
+			screenY: resultRow,
+			width,
+			height: lines.length,
+		} as TuiMouseEvent);
+
+		expect(stripAnsi(component.render(width).join("\n"))).toContain("expanded result");
+	});
+
+	test("configures spacing but not default-shell padding for self-rendered tools", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderShell: "self",
+			renderCall: () => new Text("self call", 0, 0),
+			renderResult: () => new Text("self result", 0, 0),
+		};
+		const render = (toolShellPaddingY: 0 | 1, toolShellSpacingY: 0 | 1) => {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`self-spacing-${toolShellSpacingY}-padding-${toolShellPaddingY}`,
+				{},
+				{ toolShellPaddingY, toolShellSpacingY },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+			return component.render(120).map((line) => stripAnsi(line));
+		};
+
+		expect(render(0, 1)).toEqual(render(1, 1));
+		expect(render(0, 1).map((line) => line.trim())).toEqual(["", "self call", "self result"]);
+		expect(render(0, 0).map((line) => line.trim())).toEqual(["self call", "self result"]);
+	});
+
+	test("routes self-rendered mouse rows with either spacing value", () => {
+		const toolDefinition: ToolDefinition = {
+			...createBaseToolDefinition(),
+			renderShell: "self",
+			renderCall: () => new Text("self call", 0, 0),
+			renderResult: () => new Text("self result", 0, 0),
+		};
+		for (const toolShellSpacingY of [0, 1] as const) {
+			const component = new ToolExecutionComponent(
+				"custom_tool",
+				`self-mouse-spacing-${toolShellSpacingY}`,
+				{},
+				{ toolShellSpacingY },
+				toolDefinition,
+				createFakeTui(),
+				process.cwd(),
+			);
+			component.updateResult({ content: [{ type: "text", text: "done" }], details: {}, isError: false }, false);
+			const width = 120;
+			const lines = component.render(width);
+			const callRow = lines.findIndex((line) => stripAnsi(line).includes("self call"));
+			expect(callRow).toBe(toolShellSpacingY);
+			const event: TuiMouseEvent = {
+				type: "click",
+				button: "left",
+				x: 1,
+				y: callRow,
+				screenX: 1,
+				screenY: callRow,
+				width,
+				height: lines.length,
+				shift: false,
+				alt: false,
+				ctrl: false,
+				clickCount: 1,
+			};
+			expect(component.handleMouse(event)?.handled).toBe(true);
+		}
+	});
+
 	test("self-rendered empty tool rows take no layout space", () => {
 		const toolDefinition: ToolDefinition = {
 			...createBaseToolDefinition(),
